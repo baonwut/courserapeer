@@ -1,9 +1,0 @@
-base
-datasets
-graphics
-grDevices
-knitr
-methods
-plyr
-stats
-utils
