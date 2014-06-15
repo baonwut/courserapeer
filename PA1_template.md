@@ -36,7 +36,8 @@ Make a histogram of the total number of steps taken each day
 
 ```r
 library(plyr)
-daysteps<-ddply(act,.(date),summarize,
+actTemp<-act[!is.na(act$step),]
+daysteps<-ddply(actTemp,.(date),summarize,
          sum=sum(steps,na.rm=TRUE))
 hist(daysteps$sum,xlab="Steps",main="Total Number of Steps Taken Each Day")
 ```
@@ -56,11 +57,11 @@ sapply(list(daysteps$sum),
 ```
 
 ```
-## [1] "mean of total number of steps taken per day is  9354.2"
+## [1] "mean of total number of steps taken per day is  10766.2"
 ```
 
 ```
-## [1] "median of total number of steps taken per day is  10395"
+## [1] "median of total number of steps taken per day is  10765"
 ```
 
 

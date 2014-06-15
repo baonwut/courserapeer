@@ -25,7 +25,8 @@ class(act$date)
 Make a histogram of the total number of steps taken each day
 ```{r fig.width=8, fig.height=4}
 library(plyr)
-daysteps<-ddply(act,.(date),summarize,
+actTemp<-act[!is.na(act$step),]
+daysteps<-ddply(actTemp,.(date),summarize,
          sum=sum(steps,na.rm=TRUE))
 hist(daysteps$sum,xlab="Steps",main="Total Number of Steps Taken Each Day")
 ```
