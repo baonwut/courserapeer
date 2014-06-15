@@ -9,7 +9,7 @@ opts_chunk$set(echo=TRUE)
 
 Downloda the raw data and read the data into Memory.
 ```{r}
-act<-read.csv("D:/rprog-data-ProgAssignment3-data/activity.csv")
+act<-read.csv("/Users/garfield/peer/activity.csv")
 head(act,2)
 ```
 
@@ -23,22 +23,22 @@ class(act$date)
 ## What is mean total number of steps taken per day?
 
 Make a histogram of the total number of steps taken each day
-```{r echo=FALSE,results='hide'}
-Sys.setlocale("LC_TIME", "English")
-```
 ```{r fig.width=8, fig.height=4}
-plot(unique(act[!is.na(act$steps),"date"])
-     ,tapply(act[!is.na(act$steps),"steps"],act[!is.na(act$steps),"date"],sum)
-     ,type="h",main="Total Number of Steps",ylab="Number of Steps",xlab=NA)
+library(plyr)
+daysteps<-ddply(act,.(date),summarize,
+         sum=sum(steps,na.rm=TRUE))
+hist(daysteps$sum,xlab="Steps",main="Total Number of Steps Taken Each Day")
 ```
 
 Calculate and report the mean and median total number of steps taken per day
 ```{r}
-library("plyr")
-a<-ddply(act,.(date),summarize,
-         mean=mean(steps,na.rm=TRUE),
-         median=median(steps,na.rm=TRUE))
-print(a)
+sapply(list(daysteps$sum),
+       function(x){
+           print(paste("mean of total number of steps taken per day is ",
+                       round(mean(x),1)))
+           paste("median of total number of steps taken per day is ",
+                       round(median(x),1))
+           })
 ```
 
 
@@ -62,7 +62,7 @@ nasNum<-sum(is.na(act$steps))
 print(paste("The total number of rows with NAs is",nasNum,sep=" "))
 ```
 Create a new dataset without missing values
-```{r, cache=TRUE}
+```{r}
 actnona<-act[c("date","interval")]
 for(i in 1:nrow(actnona)){
         if(is.na(act$steps[i])){
@@ -72,52 +72,28 @@ for(i in 1:nrow(actnona)){
 }
 head(actnona,2)
 ```
-Create a new dataset that is equal to the original dataset but with the missing data filled in.
-```{r echo=FALSE, results='hide'}
-Sys.setlocale("LC_TIME", "English")
-```
+Make a histogram of the total number of steps taken each day.
 ```{r fig.width=8,fig.height=4}
-plot(unique(actnona[!is.na(actnona$steps),"date"])
-     ,tapply(actnona[!is.na(actnona$steps),"steps"],
-             actnona[!is.na(actnona$steps),"date"],sum,na.rm=TRUE)
-     ,type="h",main="Total Number of Steps(missing values were imputed)",
-     xlab=NA,ylab="Number of Steps"
-     )
-```
-Calculate and report the mean and median total number of steps taken per day
-```{r}
 library(plyr)
-a<-ddply(actnona,.(date),summarize,
-         mean=mean(steps,na.rm=TRUE),
-         median=median(steps,na.rm=TRUE))
-print(a)
-```
-The shape of the distributione is't change,but the more missing valuse,the more sparse lines 
-```{r, echo=FALSE,results='hide'}
-Sys.setlocale("LC_TIME", "English")
-```
-```{r fig.width=10,fig.height=4}
-par(mfcol=c(1,2))
-plot(unique(actnona[!is.na(actnona$steps),"date"])
-     ,tapply(actnona[!is.na(actnona$steps),"steps"],
-             actnona[!is.na(actnona$steps),"date"],sum)
-     ,type="h",main="Total Number of Steps(missing values were imputed)",
-     xlab=NA,ylab="Number of Steps"
-)
-plot(unique(act[!is.na(act$steps),"date"])
-     ,tapply(act[!is.na(act$steps),"steps"],
-             act[!is.na(act$steps),"date"],sum)
-     ,type="h",main="Total Number of Steps(include missing data)",
-     xlab=NA,ylab=NA
-)
+newTotalsteps<-ddply(actnona,.(date),summarize,
+                     sum=sum(steps,na.rm=TRUE))
+hist(newTotalsteps$sum,xlab="totalsteps",main="Total Number of Steps(missing values were imputed)")
 ```
 
+Calculate and report the mean and median total number of steps taken per day
+```{r}
+lapply(list(newTotalsteps$sum),
+       function(x){
+           me<-round(mean(x),1)
+           med<-round(median(x),1)
+paste("mean=",me,"median=",med)})
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 Create a new factor variable in the dataset with two levels "weekday" and "weekend"
-```{r, echo=FALSE,results='hide'}
-Sys.setlocale("LC_TIME", "English")
+```{r echo=FALSE,results='hide'}
+Sys.setlocale("LC_TIME", "C")
 ```
 ```{r}
 actnona$weekdays<-ifelse(
