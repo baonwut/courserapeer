@@ -1,0 +1,102 @@
+---
+title: "Predict the manner"
+output: html_document
+---
+## loda the train file and build the training set
+```{r}
+alldata<-read.csv("training.csv", na.strings=c("NA",""))
+library(caret)
+```
+Bulid the training,testing and validation.
+```{r}
+inBulit<-createDataPartition(alldata$classe,p=0.7,list=FALSE)
+validation<-alldata[-inBulit,]
+inTrain<-createDataPartition(alldata[inBulit,]$classe,p=0.7,list=FALSE)
+training<-alldata[inBulit,][inTrain,]
+testing<-alldata[inBulit,][-inTrain,]
+```
+
+## Preprocess
+ There are lot of missing data in some variables,find and throw out.
+```{r}
+lotMiss<-names(training)[!(lapply(training,function(i){sum(is.na(i))})>5000)]
+training<-subset(training,select=lotMiss)
+testing<-subset(testing,select=lotMiss)
+validation<-subset(validation,select=lotMiss)
+```
+ Throw out variables except accelerometers on the belt, forearm, arm, and dumbell.
+```{r}
+accelname<-names(training)[grep("belt|arm|dumbell|classe",names(training),perl=TRUE)]
+training<-subset(training,select=accelname)
+testing<-subset(testing,select=accelname)
+validation<-subset(validation,select=accelname)
+```
+The remained Variables has no missing data
+```{r}
+#sum(lapply(training,function(i){sum(is.na(i))})>0)
+#Not find Linear Dependencies
+#namelen<-length(training);findlinedata<-findLinearCombos(as.matrix(training[-namelen]))
+```
+Identifying Correlated Predictors.
+```{r}
+namelencor<-length(training)
+descrCor <- cor(training[-namelencor])
+highlyCor<-findCorrelation(cor(training[-namelencor]),cutoff = 0.80)
+newtrain<-training[-namelencor][,-highlyCor]
+descrCorfin <- cor(newtrain)
+NonCorname<-names(newtrain)
+training<-subset(training,select=c(NonCorname,"classe"))
+testing<-subset(testing,select=c(NonCorname,"classe"))
+validation<-subset(validation,select=c(NonCorname,"classe"))
+summary(descrCor[upper.tri(descrCor)])
+summary(descrCorfin[upper.tri(descrCorfin)])
+```
+This process,reduce the correlate of predictors.
+
+There are also 30 predictors be remained, thus using PCA funciton to reduce.We need the PCA process capture 80% of the variance. 
+```{r}
+namelenpac<-grep("classe",names(training),perl=TRUE)
+namePCA<-names(training[-namelenpac])
+prePCA<-preProcess(training[,namePCA],method="pca",thresh=0.8)
+trainPC<-predict(prePCA,training[,namePCA])
+training<-cbind(trainPC,training["classe"])
+testPC<-predict(prePCA,testing[,namePCA])
+testing<-cbind(testPC,testing["classe"])
+validPC<-predict(prePCA,validation[,namePCA])
+validation<-cbind(validPC,validation["classe"])
+```
+
+## Fit model
+```{r,results='hide'}
+# random forest
+rfFit<-train(classe~.,data=training,method="rf",
+             trControl = trainControl(method="cv",number=3))
+# rpart
+rpartFit<-train(classe~.,data=training,method="rpart",
+                trControl = trainControl(method="cv",number=3))
+#boosting
+gbmFit<-train(classe~.,data=training,method="gbm",
+             trControl = trainControl(method="cv",number=3))
+```
+## Predict on the testing set
+Thus tha accuracy of Random forest modle is more than 0.9,and accuracy of other models are less than 0.7, We choose the "rfFit" as final model.
+```{r}
+confusionMatrix(testing$classe,predict(rfFit,testing))
+confusionMatrix(testing$classe,predict(rpartFit,testing))
+confusionMatrix(testing$classe,predict(gbmFit,testing))
+```
+## Cross validation: Predict on validation data set
+```{r}
+confusionMatrix(validation$classe,predict(rfFit,validation))
+```
+# Predict on new data(test)
+```{r}
+predictedata<-read.csv("predicted.csv", na.strings=c("NA",""))#read data
+predicted<-subset(predictedata,select=lotMiss[1:59])#throw the missing data
+predicted<-subset(predicted,select=accelname[1:39])#remain accelerometers
+predicted<-subset(predicted,select=NonCorname)#remain non correlated Predictors
+predictedPC<-predict(prePCA,predicted[,namePCA])#PCA
+predicedValue<-predict(rfFit,predictedPC)#Random forest
+answers<-predicedValue#get the predeicte values
+answers
+```
